@@ -83,6 +83,10 @@ class Behavior {
         throw new Error("Reflow.Behavior.add not defined");
     }
 
+    update(options = {}) {
+        throw new Error("Reflow.Behavior.update not defined");
+    }
+
     remove(options = {}) {
         throw new Error("Reflow.Behavior.remove not defined");
     }

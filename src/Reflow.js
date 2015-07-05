@@ -8,6 +8,11 @@ class Reflow {
             this.target = options.target;
         }
 
+        this.preloadAhead  = options.preloadAhead || 0;
+        this.preloadBehind = options.preloadBehind || 0;
+        this.unloadBehind  = options.unloadBehind || 0;
+        this.unloadAhead   = options.unloadAhead || 0;
+
         if (options.animations) {
             this.animations = options.animations;
 
@@ -30,7 +35,12 @@ class Reflow {
             this.pages = options.pages;
 
             this.adapter.each(this.pages, (index, page) => {
+                page.setIndex(index);
                 page.setReflow(this);
+
+                if (!page.getAnimations() && options.defaults && options.defaults.animations) {
+                    page.setAnimations(options.defaults.animations);
+                }
             })
 
             this.updatePage();
@@ -59,12 +69,34 @@ class Reflow {
         return this;
     }
 
+    preloadPrevious() {
+        var pages = this.getPages();
+        var index = this.getCurrentPage().getIndex();
+
+        if (index > 0 && !this.isLoading) {
+            this.preloadPage(pages[index - 1]);
+        }
+
+        return this;
+    }
+
     next() {
         var pages = this.getPages();
         var index = this.getCurrentPage().getIndex();
 
         if (index + 1 < pages.length && !this.isLoading) {
             this.showPage(pages[index + 1]);
+        }
+
+        return this;
+    }
+
+    preloadNext() {
+        var pages = this.getPages();
+        var index = this.getCurrentPage().getIndex();
+
+        if (index + 1 < pages.length && !this.isLoading) {
+            this.preloadPage(pages[index + 1]);
         }
 
         return this;
@@ -97,10 +129,49 @@ class Reflow {
     }
 
     preloadPage(page, success, failure) {
-        if (page.isPreloaded) {
+        var preload = () => {
+            var index = page.getIndex();
+            var pages = this.getPages();
+
+            var cursor = index;
+
+            while (cursor < index + this.preloadAhead) {
+                if (++cursor < pages.length) {
+                    if (!page[cursor].isPreloaded && !page[cursor].isLoading) {
+                        pages[cursor].preload();
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            var cursor = index;
+
+            while (cursor > index - this.preloadBehind) {
+                if (--cursor > -1) {
+                    if (!page[cursor].isPreloaded && !page[cursor].isLoading) {
+                        pages[cursor].preload();
+                    }
+                } else {
+                    break;
+                }
+            }
+        };
+
+        var preloadSuccess = function() {
             success && success(page);
+            preload();
+        };
+
+        var preloadFailure = function() {
+            failure && failure(page);
+            preload();
+        };
+
+        if (page.isPreloaded) {
+            preloadSuccess();
         } else {
-            page.preload(success, failure);
+            page.preload(preloadSuccess, preloadFailure);
         }
 
         return this;
@@ -113,6 +184,33 @@ class Reflow {
         if (!this.adapter) {
             throw new Error("Reflow.adapter is not defined");
         }
+
+        var unload = () => {
+            var index = page.getIndex();
+            var pages = this.getPages();
+
+            var cursor = index - this.unloadBehind;
+
+            while (cursor > -1) {
+                pages[cursor--].unload();
+            }
+
+            var cursor = index + this.unloadAhead;
+
+            while (cursor < pages.length) {
+                pages[cursor++].unload();
+            }
+        };
+
+        var unloadSuccess = function() {
+            success && success(page);
+            unload();
+        };
+
+        var unloadFailure = function() {
+            failure && failure(page);
+            unload();
+        };
 
         return this.preloadPage(
             page,
@@ -127,14 +225,14 @@ class Reflow {
                 page.show(() => {
                     this.isLoading         = false;
                     this.hash              = page.getHash();
-                    document.location.href = `#${this.hash}`;
-                    success && success();
+                    document.location.href = "#" + this.hash;
+                    unloadSuccess && unloadSuccess();
                 });
             },
             () => {
                 page.hide(() => {
                     this.isLoading = false;
-                    failure && failure();
+                    unloadFailure && unloadFailure();
                 });
             }
         );

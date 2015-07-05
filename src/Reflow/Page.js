@@ -1,9 +1,5 @@
 class Page {
     constructor(options = {}) {
-        if (typeof options.index == "number") {
-            this.index = options.index;
-        }
-
         if (options.hash) {
             this.hash  = options.hash;
         }
@@ -26,10 +22,15 @@ class Page {
 
         this.isPreloaded = false;
         this.isVisible   = false;
+        this.isLoading   = false;
     }
 
     getAdapter() {
-        return this.adapter;
+        if (this.adapter) {
+            return this.adapter;
+        }
+
+        return this.reflow.getAdapter();
     }
 
     setAdapter(adapter) {
@@ -39,11 +40,25 @@ class Page {
     }
 
     getReflow() {
-        return this.reflow;
+        if (this.reflow) {
+            return this.reflow;
+        }
+
+        return Reflow.getInstance();
     }
 
     setReflow(reflow) {
         this.reflow = reflow
+
+        return this;
+    }
+
+    getIndex() {
+        return this.index;
+    }
+
+    setIndex(index) {
+        this.index = index;
 
         return this;
     }
@@ -76,6 +91,21 @@ class Page {
 
     getAnimations() {
         return this.animations;
+    }
+
+    setAnimations(animations) {
+        this.animations = animations;
+
+        return this;
+    }
+
+    unload() {
+        const adapter = this.getAdapter();
+
+        adapter.remove(this.container);
+
+        this.isPreloaded = false;
+        this.isVisible = false;
     }
 
     validate() {
@@ -152,10 +182,17 @@ class Page {
     }
 
     preload(success, failure) {
+        if (this.isLoading) {
+            return;
+        }
+
+        this.isLoading = true;
+
         var data      = this.validate();
         var head      = data.adapter.find("head");
         var failed    = false;
         var completed = 0;
+        var resources = 1;
 
         if (!data.target) {
             throw new Error("Reflow.Page.target not defined");
@@ -169,14 +206,6 @@ class Page {
             throw new Error("Reflow.Page.resources.html not defined");
         }
 
-        if (!data.resources.css) {
-            throw new Error("Reflow.Page.resources.css not defined");
-        }
-
-        if (!data.resources.js) {
-            throw new Error("Reflow.Page.resources.js not defined");
-        }
-
         data.adapter.request({
             "url"     : data.resources.html,
             "failure" : () => {
@@ -185,51 +214,68 @@ class Page {
             },
             "success" : (response) => {
                 completed += 1;
-                this.container = data.adapter.createElement(`<div class='page ${data.hash}'>${response}</div>`)
+                this.container = data.adapter.createElement("<div style='opacity: 0' class='page " + data.hash + "'>" + response + "</div>");
+
+                setTimeout(() => {
+                    data.adapter.style(this.container, {
+                        "opacity" : 0,
+                        "z-index" : data.reflow.getPages().length - this.getIndex()
+                    });
+                }, 0);
+
                 data.adapter.appendElement(data.target, this.container);
                 data.reflow.updateBehaviors();
             }
         });
 
-        data.adapter.request({
-            "url"     : data.resources.css,
-            "failure" : () => {
-                failed = true;
-                completed += 1;
-            },
-            "success" : (response) => {
-                completed += 1;
+        if (data.resources.css) {
+            resources++;
 
-                var element = data.adapter.createElement(`<style>${response}</style>`);
+            data.adapter.request({
+                "url"     : data.resources.css,
+                "failure" : () => {
+                    failed = true;
+                    completed += 1;
+                },
+                "success" : (response) => {
+                    completed += 1;
 
-                data.adapter.appendElement(head, element);
-            }
-        })
+                    const element = data.adapter.createElement("<style>" + response + "</style>");
 
-        data.adapter.request({
-            "url"     : data.resources.js,
-            "failure" : () => {
-                failed = true;
-                completed += 1;
-            },
-            "success" : (response) => {
-                completed += 1;
+                    data.adapter.appendElement(head, element);
+                }
+            })
+        }
 
-                var element = data.adapter.createElement(`<script>${response}</script>`);
+        if (data.resources.js) {
+            resources++;
 
-                data.adapter.appendElement(head, element);
-            }
-        });
+            data.adapter.request({
+                "url"     : data.resources.js,
+                "failure" : () => {
+                    failed = true;
+                    completed += 1;
+                },
+                "success" : (response) => {
+                    completed += 1;
+
+                    const element = data.adapter.createElement("<script>" + response + "</script>");
+
+                    data.adapter.appendElement(head, element);
+                }
+            });
+        }
 
         var check = () => {
             setTimeout(() => {
-                if (completed === 3) {
+                if (completed >= resources) {
                     if (failed) {
                         this.isPreloaded = false;
 
                         failure && failure(this);
                     } else {
                         this.isPreloaded = true;
+                        this.isLoading   = false;
 
                         data.adapter.trigger(this.container, "reflow-page-load");
 
@@ -254,7 +300,7 @@ class Page {
         }
 
         if (!data.pageAnimations.show) {
-            throw new Error("Reflow.Page.animations.show not defined")
+            throw new Error("Reflow.Page.animations.show not defined");
         }
 
         if (!data.reflowAnimations) {
@@ -262,7 +308,7 @@ class Page {
         }
 
         if (!data.reflowAnimations[this.invoke(data.pageAnimations.show)]) {
-            throw new Error(`Reflow.animations. ${this.invoke(data.pageAnimations.show)} not defined`);
+            throw new Error("Reflow.animations. " + this.invoke(data.pageAnimations.show) + " not defined");
         }
 
         data.adapter.trigger(this.container, "reflow-page-before-show");
@@ -270,7 +316,7 @@ class Page {
         data.reflowAnimations[data.pageAnimations.show].show(() => {
             this.isVisible = true;
 
-            data.adapter.trigger(this.container, "reflow-page-after-show")
+            data.adapter.trigger(this.container, "reflow-page-after-show");
 
             callback && callback();
         });
@@ -294,7 +340,7 @@ class Page {
         }
 
         if (!data.reflowAnimations[this.invoke(data.pageAnimations.hide)]) {
-            throw new Error(`Reflow.animations. ${this.invoke(data.pageAnimations.hide)} not defined`)
+            throw new Error("Reflow.animations. " + this.invoke(data.pageAnimations.hide) + " not defined");
         }
 
         data.adapter.trigger(this.container, "reflow-page-before-hide");

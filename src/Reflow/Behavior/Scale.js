@@ -12,20 +12,18 @@ class Scale extends Behavior {
 
             timeout = setTimeout(() => {
                 adapter.animate(parameters.target, {
-                    "scale" : [this.scale(), this.scale()]
+                    "scale" : [this.scale(element, parameters), this.scale(element, parameters)]
                 });
             }, 300);
         });
 
         adapter.style(parameters.target, {
-            "scale" : [this.scale(), this.scale()]
+            "scale" : [this.scale(element, parameters), this.scale(element, parameters)]
         });
     }
 
-    scale() {
-        const adapter    = this.getAdapter();
-        const element    = this.getElement();
-        const parameters = this.getParameters();
+    scale(element, parameters = {}) {
+        const adapter = this.getAdapter();
 
         return Math.min(
             adapter.getWidth(element) / adapter.getWidth(parameters.target),
@@ -33,7 +31,11 @@ class Scale extends Behavior {
         );
     }
 
-    remove(element, parameters = {}) {
+    update(element, parameters = {}) {
+        // TODO
+    }
+
+    remove(element) {
         const adapter   = this.getAdapter();
         const container = adapter.find(window);
 

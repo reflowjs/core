@@ -3,41 +3,56 @@ import Behavior from "./Behavior"
 class Fit extends Behavior {
     add(element, parameters = {}) {
         const adapter = this.getAdapter();
-        const page    = this.getReflow().getCurrentPage();
-        const width   = adapter.getWidth(page.getContainer());
 
-        adapter.style(element, {
-            "overflow"    : "scroll-x",
-            "white-space" : "nowrap"
+        adapter.bind(element, "reflow-behavior-fit", () => {
+            const page  = adapter.find(".page");
+            const width = adapter.getWidth(page);
+
+            adapter.style(element, {
+                "overflow"    : "scroll-x",
+                "white-space" : "nowrap"
+            });
+
+            var last;
+
+            for (var i = 1; i < 50; i++) {
+                adapter.style(element, {
+                    "font-size"   : (i * 10) + "px",
+                    "line-height" : (i * 10) + "px"
+                });
+
+                last = i * 10;
+
+                if (element.offsetWidth > width) {
+                    break;
+                }
+            }
+
+            for (var i = 1; i < 100; i++) {
+                adapter.style(element, {
+                    "font-size"   : (last - i) + "px",
+                    "line-height" : (last - i) + "px"
+                });
+
+                if (element.offsetWidth <= width) {
+                    break;
+                }
+            }
+
+            adapter.trigger("*", "reflow-behavior-center");
         });
 
-        var last;
+        adapter.trigger(element, "reflow-behavior-fit");
+    }
 
-        for (var i = 1; i < 20; i++) {
-            adapter.style(element, {
-                "font-size"   : (i * 10) + "px",
-                "line-height" : (i * 10) + "px"
-            });
+    update(element, parameters = {}) {
+        const adapter = this.getAdapter();
 
-            last = i * 10;
+        adapter.trigger(element, "reflow-behavior-fit");
+    }
 
-            if (element.offsetWidth > width) {
-                break;
-            }
-        }
-
-        for (var i = 1; i < 50; i++) {
-            adapter.style(element, {
-                "font-size"   : (last - i) + "px",
-                "line-height" : (last - i) + "px"
-            });
-
-            if (element.offsetWidth <= width) {
-                break;
-            }
-        }
-
-        adapter.trigger(adapter.getParent(element), "reflow-behavior-center");
+    remove(element) {
+        // TODO
     }
 }
 

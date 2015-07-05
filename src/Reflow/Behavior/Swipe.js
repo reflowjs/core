@@ -23,7 +23,11 @@ class Swipe extends Behavior {
         return this;
     }
 
-    remove(element, parameters = {}) {
+    update(element, parameters = {}) {
+        // TODO
+    }
+
+    remove(element) {
         const adapter = this.getAdapter();
 
         adapter.unbind(element, ".reflow-behavior-swipe");

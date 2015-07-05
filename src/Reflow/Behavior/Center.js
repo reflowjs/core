@@ -44,6 +44,16 @@ class Center extends Behavior {
             });
         }
     }
+
+    update(element, parameters = {}) {
+        const adapter = this.getAdapter();
+
+        adapter.trigger(element, "reflow-behavior-center");
+    }
+
+    remove(element) {
+        // TODO
+    }
 }
 
 export default Center;

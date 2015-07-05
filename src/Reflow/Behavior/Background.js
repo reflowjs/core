@@ -3,9 +3,9 @@ import Behavior from "./Behavior"
 class Background extends Behavior {
     add(element, parameters = {}) {
         const adapter = this.getAdapter();
-        const page    = this.getReflow().getCurrentPage();
+        const page    = adapter.getParent(element, ".page");
 
-        adapter.style(page.getContainer(), {
+        adapter.style(page, {
             "background-image"    : "url(" + adapter.attribute(element, "src") + ")",
             "background-size"     : "cover",
             "background-repeat"   : "no-repeat",
@@ -15,6 +15,14 @@ class Background extends Behavior {
         adapter.style(element, {
             "display" : "none"
         });
+    }
+
+    update(element, parameters = {}) {
+        // TODO
+    }
+
+    remove(element) {
+        // TODO
     }
 }
 

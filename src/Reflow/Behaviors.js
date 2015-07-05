@@ -114,7 +114,7 @@ class Behaviors {
         const behavior = this.behaviors[type];
 
         adapter.each(behavior.elements, (index, element) => {
-            this.forward(behavior, "remove", element, this.namespace(element, type));
+            this.forward(behavior, "remove", element);
         });
 
         delete this.behaviors[type];
@@ -133,12 +133,14 @@ class Behaviors {
                 if (behavior.elements.indexOf(element) === -1) {
                     this.forward(behavior.instance, "add", element, this.namespace(element, type));
                     behavior.elements.push(element);
+                } else {
+                    this.forward(behavior.instance, "update", element, this.namespace(element, type));
                 }
             });
 
             adapter.each(behavior.elements, (index, element) => {
                 if (elements.indexOf(element) === -1) {
-                    this.forward(behavior.instance, "remove", element, this.namespace(element, type));
+                    this.forward(behavior.instance, "remove", element);
                     behavior.elements.splice(behavior.elements.indexOf(element), 1);
                 }
             });

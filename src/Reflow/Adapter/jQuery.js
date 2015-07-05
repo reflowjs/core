@@ -115,8 +115,20 @@ class jQuery extends Adapter {
         return $.extend(true, destination, source);
     }
 
-    getParent(elements) {
-        return $(elements).parent();
+    getParent(elements, selector) {
+        return $(elements).parent(selector);
+    }
+
+    html(element, content) {
+        if (content) {
+            return $(element).html(content);
+        }
+
+        return $(element).html();
+    }
+
+    remove(element) {
+        $(element).remove();
     }
 }
 

@@ -21,7 +21,11 @@ class FadeOut extends Animation {
         return this;
     }
 
-    remove(element, parameters = {}) {
+    update(element, parameters = {}) {
+        // TODO
+    }
+
+    remove(element) {
         const adapter = this.getAdapter();
 
         adapter.unbind(element, "reflow-behavior-animation-fade-out-reset");
