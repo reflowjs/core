@@ -137,7 +137,7 @@ class Reflow {
 
             while (cursor < index + this.preloadAhead) {
                 if (++cursor < pages.length) {
-                    if (!page[cursor].isPreloaded && !page[cursor].isLoading) {
+                    if (page[cursor] && !page[cursor].isPreloaded && !page[cursor].isLoading) {
                         pages[cursor].preload();
                     }
                 } else {
@@ -149,7 +149,7 @@ class Reflow {
 
             while (cursor > index - this.preloadBehind) {
                 if (--cursor > -1) {
-                    if (!page[cursor].isPreloaded && !page[cursor].isLoading) {
+                    if (page[cursor] && !page[cursor].isPreloaded && !page[cursor].isLoading) {
                         pages[cursor].preload();
                     }
                 } else {
@@ -192,13 +192,17 @@ class Reflow {
             var cursor = index - this.unloadBehind;
 
             while (cursor > -1) {
-                pages[cursor--].unload();
+                if (pages[cursor]) {
+                    pages[cursor--].unload();
+                }
             }
 
             var cursor = index + this.unloadAhead;
 
             while (cursor < pages.length) {
-                pages[cursor++].unload();
+                if (pages[cursor]) {
+                    pages[cursor++].unload();
+                }
             }
         };
 
