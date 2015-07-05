@@ -1,0 +1,26 @@
+{
+  "name": "reflow",
+  "description": "Story telling framework",
+  "main": "src/Reflow.js",
+  "scripts": {
+    "build": "browserify src/Reflow.js -t babelify --outfile dist/reflow.js && uglifyjs dist/reflow.js -o dist/reflow.min.js",
+    "start": "watchify src/Reflow.js -t babelify --outfile dist/reflow.js && uglifyjs dist/reflow.js -o dist/reflow.min.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reflow/reflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/reflow/reflow/issues"
+  },
+  "homepage": "https://github.com/reflow/reflow",
+  "author": "Christopher Pitt",
+  "license": "MIT",
+  "devDependencies": {
+    "babel": "^5.4.3",
+    "babelify": "^6.1.1",
+    "browserify": "^10.2.0",
+    "uglify-js": "^2.4.23",
+    "watchify": "^3.2.1"
+  }
+}
