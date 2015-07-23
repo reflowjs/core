@@ -8,10 +8,10 @@ class Reflow {
             this.target = options.target;
         }
 
-        this.preloadAhead  = options.preloadAhead || 0;
-        this.preloadBehind = options.preloadBehind || 0;
-        this.unloadBehind  = options.unloadBehind || 0;
-        this.unloadAhead   = options.unloadAhead || 0;
+        this.preloadBefore = options.preloadBefore || 0;
+        this.preloadAfter = options.preloadAfter || 0;
+        this.unloadBefore = options.unloadBefore || 0;
+        this.unloadAfter = options.unloadAfter || 0;
 
         if (options.animations) {
             this.animations = options.animations;
@@ -36,6 +36,7 @@ class Reflow {
 
             this.adapter.each(this.pages, (index, page) => {
                 page.setIndex(index);
+                page.setTarget(this.getTarget());
                 page.setReflow(this);
 
                 if (!page.getAnimations() && options.defaults && options.defaults.animations) {
@@ -53,9 +54,11 @@ class Reflow {
                 this.hash = document.location.hash.replace("#", "");
                 this.updatePage();
             }
-        }, 100);
+        }, 10);
 
         Reflow.instances[options.name || "default"] = this;
+
+        this.options = options;
     }
 
     previous() {
@@ -69,34 +72,12 @@ class Reflow {
         return this;
     }
 
-    preloadPrevious() {
-        var pages = this.getPages();
-        var index = this.getCurrentPage().getIndex();
-
-        if (index > 0 && !this.isLoading) {
-            this.preloadPage(pages[index - 1]);
-        }
-
-        return this;
-    }
-
     next() {
         var pages = this.getPages();
         var index = this.getCurrentPage().getIndex();
 
         if (index + 1 < pages.length && !this.isLoading) {
             this.showPage(pages[index + 1]);
-        }
-
-        return this;
-    }
-
-    preloadNext() {
-        var pages = this.getPages();
-        var index = this.getCurrentPage().getIndex();
-
-        if (index + 1 < pages.length && !this.isLoading) {
-            this.preloadPage(pages[index + 1]);
         }
 
         return this;
@@ -129,49 +110,10 @@ class Reflow {
     }
 
     preloadPage(page, success, failure) {
-        var preload = () => {
-            var index = page.getIndex();
-            var pages = this.getPages();
-
-            var cursor = index;
-
-            while (cursor < index + this.preloadAhead) {
-                if (++cursor < pages.length) {
-                    if (page[cursor] && !page[cursor].isPreloaded && !page[cursor].isLoading) {
-                        pages[cursor].preload();
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            var cursor = index;
-
-            while (cursor > index - this.preloadBehind) {
-                if (--cursor > -1) {
-                    if (page[cursor] && !page[cursor].isPreloaded && !page[cursor].isLoading) {
-                        pages[cursor].preload();
-                    }
-                } else {
-                    break;
-                }
-            }
-        };
-
-        var preloadSuccess = function() {
-            success && success(page);
-            preload();
-        };
-
-        var preloadFailure = function() {
-            failure && failure(page);
-            preload();
-        };
-
         if (page.isPreloaded) {
-            preloadSuccess();
+            success && success(page);
         } else {
-            page.preload(preloadSuccess, preloadFailure);
+            page.preload(success, failure);
         }
 
         return this;
@@ -185,61 +127,125 @@ class Reflow {
             throw new Error("Reflow.adapter is not defined");
         }
 
-        var unload = () => {
-            var index = page.getIndex();
-            var pages = this.getPages();
-
-            var cursor = index - this.unloadBehind;
-
-            while (cursor > -1) {
-                if (pages[cursor]) {
-                    pages[cursor--].unload();
+        const showPageSuccess = () => {
+            this.adapter.each(this.pages, (index, other) => {
+                if (other.isVisible) {
+                    this.previousPage = other;
+                    other.hide();
                 }
-            }
+            });
 
-            var cursor = index + this.unloadAhead;
+            page.show(() => {
+                this.isLoading         = false;
+                this.hash              = page.getHash();
+                document.location.href = "#" + this.hash;
+                success && success(page);
+            });
 
-            while (cursor < pages.length) {
-                if (pages[cursor]) {
-                    pages[cursor++].unload();
-                }
-            }
+            this.preloadSiblings();
+            this.unloadSiblings();
         };
 
-        var unloadSuccess = function() {
+        const showPageFailure = () => {
+            page.hide(() => {
+                this.isLoading = false;
+                failure && failure(page);
+            });
+
+            this.preloadSiblings();
+            this.unloadSiblings();
+        }
+
+        this.preloadPage(page, showPageSuccess, showPageFailure);
+
+        return this;
+    }
+
+    getPreloadBefore() {
+        return this.preloadBefore;
+    }
+
+    getPreloadAfter() {
+        return this.preloadAfter;
+    }
+
+    getUnloadBefore() {
+        return this.unloadBefore;
+    }
+
+    getUnloadAfter() {
+        return this.unloadAfter;
+    }
+
+    preloadSiblings() {
+        const indices = this.getClosePageIndices(this.getPreloadBefore(), this.getPreloadAfter());
+
+        indices.forEach(index => this.preload(index));
+    }
+
+    preload(index, success, failure) {
+        const page = this.pages[index];
+
+        if (!page) {
+            return;
+        }
+
+        if (page.isPreloaded) {
             success && success(page);
-            unload();
-        };
+        } else {
+            page.preload(success, failure);
+        }
 
-        var unloadFailure = function() {
-            failure && failure(page);
-            unload();
-        };
+        return this;
+    }
 
-        return this.preloadPage(
-            page,
-            () => {
-                this.adapter.each(this.pages, (index, other) => {
-                    if (other.isVisible) {
-                        this.previousPage = other;
-                        other.hide();
-                    }
-                });
+    getClosePageIndices(beforePages, afterPages) {
+        const currentPage = this.getCurrentPage();
 
-                page.show(() => {
-                    this.isLoading         = false;
-                    this.hash              = page.getHash();
-                    document.location.href = "#" + this.hash;
-                    unloadSuccess && unloadSuccess();
-                });
-            },
-            () => {
-                page.hide(() => {
-                    this.isLoading = false;
-                    unloadFailure && unloadFailure();
-                });
-            }
-        );
+        var indices = [];
+
+        var times = 0;
+        var index = currentPage.getIndex();
+
+        while (--index > -1 && times++ < beforePages) {
+            indices.unshift(index);
+        }
+
+        times = 0;
+        index = currentPage.getIndex();
+
+        while (++index < this.pages.length && times++ < afterPages) {
+            indices.push(index);
+        }
+
+        return indices;
+    }
+
+    unloadSiblings() {
+        const indices = this.getFarPageIndices(this.getUnloadBefore(), this.getUnloadAfter());
+        const currentPageIndex = this.getCurrentPage().getIndex();
+
+        indices.filter(index => index !== currentPageIndex).forEach(index => this.unload(index));
+    }
+
+    unload(index, success, failure) {
+        const page = this.pages[index];
+
+        if (!page.isPreloaded) {
+            success && success(page);
+        } else {
+            page.unload(success, failure);
+        }
+
+        return this;
+    }
+
+    getFarPageIndices(beforePages, afterPages) {
+        const adapter = this.getAdapter();
+        const close = this.getClosePageIndices(beforePages, afterPages);
+        const all = this.pages.map(page => page.getIndex());
+
+        return all.filter(index => close.indexOf(index) === -1);
     }
 
     getBehaviors() {

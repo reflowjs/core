@@ -77,7 +77,7 @@ class jQuery extends Adapter {
         return $.ajax({
             "url"      : options.url,
             "dataType" : "text",
-            "cache"    : false,
+            "cache"    : true,
             "success"  : options.success,
             "error"    : options.error
         });

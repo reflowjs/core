@@ -20,6 +20,18 @@ class Page {
             this.target = options.target;
         }
 
+        if (this.resources.html) {
+            this.resources.html += "?" + (new Date().getTime());
+        }
+
+        if (this.resources.css) {
+            this.resources.css += "?" + (new Date().getTime());
+        }
+
+        if (this.resources.js) {
+            this.resources.js += "?" + (new Date().getTime());
+        }
+
         this.isPreloaded = false;
         this.isVisible   = false;
         this.isLoading   = false;
@@ -97,15 +109,6 @@ class Page {
         this.animations = animations;
 
         return this;
-    }
-
-    unload() {
-        const adapter = this.getAdapter();
-
-        adapter.remove(this.container);
-
-        this.isPreloaded = false;
-        this.isVisible = false;
     }
 
     validate() {
@@ -216,13 +219,6 @@ class Page {
                 completed += 1;
                 this.container = data.adapter.createElement("<div style='opacity: 0' class='page " + data.hash + "'>" + response + "</div>");
 
-                setTimeout(() => {
-                    data.adapter.style(this.container, {
-                        "opacity" : 0,
-                        "z-index" : data.reflow.getPages().length - this.getIndex()
-                    });
-                }, 0);
-
                 data.adapter.appendElement(data.target, this.container);
                 data.reflow.updateBehaviors();
             }
@@ -240,7 +236,7 @@ class Page {
                 "success" : (response) => {
                     completed += 1;
 
-                    const element = data.adapter.createElement("<style>" + response + "</style>");
+                    const element = data.adapter.createElement("<style class='style_" + this.getIndex() + "'>" + response + "</style>");
 
                     data.adapter.appendElement(head, element);
                 }
@@ -259,7 +255,7 @@ class Page {
                 "success" : (response) => {
                     completed += 1;
 
-                    const element = data.adapter.createElement("<script>" + response + "</script>");
+                    const element = data.adapter.createElement("<script class='script_" + this.getIndex() + "''>" + response + "</script>");
 
                     data.adapter.appendElement(head, element);
                 }
@@ -288,6 +284,29 @@ class Page {
         };
 
         check();
+
+        return this;
+    }
+
+    unload() {
+        const adapter = this.getAdapter();
+        const index = this.getIndex();
+
+        const style = adapter.find("style_" + index);
+        const script = adapter.find("script_" + index);
+
+        if (style) {
+            adapter.remove(style);
+        }
+
+        if (script) {
+            adapter.remove(script);
+        }
+
+        adapter.remove(this.container);
+
+        this.isPreloaded = false;
+        this.isVisible = false;
 
         return this;
     }
