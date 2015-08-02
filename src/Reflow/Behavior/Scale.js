@@ -26,8 +26,8 @@ class Scale extends Behavior {
         const adapter = this.getAdapter();
 
         return Math.min(
-            adapter.getWidth(element) / adapter.getWidth(parameters.target),
-            adapter.getHeight(element) / adapter.getHeight(parameters.target)
+            adapter.getWidth(element) / adapter.getWidth(parameters.target) * parameters.modifier,
+            adapter.getHeight(element) / adapter.getHeight(parameters.target) * parameters.modifier
         );
     }
 
