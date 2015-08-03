@@ -358,6 +358,7 @@ if (typeof window != "undefined") {
     Reflow.Behavior.Background         = require("./Reflow/Behavior/Background");
     Reflow.Behavior.Center             = require("./Reflow/Behavior/Center");
     Reflow.Behavior.Fit                = require("./Reflow/Behavior/Fit");
+    Reflow.Behavior.FixedImage         = require("./Reflow/Behavior/FixedImage");
     Reflow.Behavior.Highlight          = require("./Reflow/Behavior/Highlight");
     Reflow.Behavior.Scale              = require("./Reflow/Behavior/Scale");
     Reflow.Behavior.Swipe              = require("./Reflow/Behavior/Swipe");
